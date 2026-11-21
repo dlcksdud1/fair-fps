@@ -2,3 +2,6 @@
 .godot/
 /android/
 /backend/target/
+
+.gradle/
+/server/java_tcp_prototype/build/

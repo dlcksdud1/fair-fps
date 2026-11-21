@@ -1,20 +1,26 @@
 [gd_scene format=3 uid="uid://dqx34rnqvegc8"]
 
 [ext_resource type="Texture2D" uid="uid://dyosu5p4316l0" path="res://assets/silverCoin.png" id="1_s0dlu"]
-[ext_resource type="Script" uid="uid://dkc2vopprjrcp" path="res://scene/coin.gd" id="1_ya73g"]
+[ext_resource type="Script" uid="uid://dkc2vopprjrcp" path="res://script/coin.gd" id="1_ya73g"]
+[ext_resource type="Texture2D" uid="uid://bkwon0dx8hvlw" path="res://assets/Diamond.png" id="3_leebs"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_n776h"]
 radius = 139.43098
 
-[node name="Coin" type="Area2D" unique_id=997364174]
+[node name="Coin" type="Area2D" unique_id=997364174 groups=["coins"]]
 scale = Vector2(0.5, 0.5)
 collision_layer = 32
 collision_mask = 16
 script = ExtResource("1_ya73g")
+silver_texture = ExtResource("1_s0dlu")
+diamond_texture = ExtResource("3_leebs")
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=1753645309]
+position = Vector2(0.96, -3.525)
+scale = Vector2(0.5, 0.507)
 texture = ExtResource("1_s0dlu")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=537119391]
+scale = Vector2(0.47, 0.47)
 shape = SubResource("CircleShape2D_n776h")
 debug_color = Color(0.3435171, 0.49727118, 0.96688217, 0.41960785)

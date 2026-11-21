@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://cqftaxcrcscjd"]
 
-[ext_resource type="Script" uid="uid://c5ab0iy5cbims" path="res://scene/player.gd" id="1_si3wx"]
+[ext_resource type="Script" uid="uid://c5ab0iy5cbims" path="res://script/player.gd" id="1_si3wx"]
 [ext_resource type="Texture2D" uid="uid://nul8eu6qhfin" path="res://assets/kenney_top-down-shooter/PNG/Hitman 1/hitman1_gun.png" id="2_62i1b"]
 [ext_resource type="PackedScene" uid="uid://cc1ine35ngjl7" path="res://scene/bullet.tscn" id="2_y30ri"]
 
@@ -16,15 +16,15 @@ script = ExtResource("1_si3wx")
 bullet_scene = ExtResource("2_y30ri")
 
 [node name="Sprite2D" type="Sprite2D" parent="." unique_id=1160001404]
-position = Vector2(0, -1)
+position = Vector2(9.595, -1)
 texture = ExtResource("2_62i1b")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1389017675]
-position = Vector2(-8.5, -1)
+position = Vector2(0.745, -1)
 shape = SubResource("RectangleShape2D_y30ri")
 
 [node name="Muzzle" type="Marker2D" parent="." unique_id=34046747]
-position = Vector2(23, 9)
+position = Vector2(32.28, 9)
 
 [node name="Camera2D" type="Camera2D" parent="." unique_id=2040542290]
 scale = Vector2(2, 2)
@@ -32,8 +32,9 @@ zoom = Vector2(0.45, 0.45)
 
 [node name="PickupArea" type="Area2D" parent="." unique_id=452893270]
 collision_layer = 16
+collision_mask = 32
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="PickupArea" unique_id=818187767]
-position = Vector2(-8, -1)
+position = Vector2(0.095, -0.43)
 shape = SubResource("CircleShape2D_j6sbi")
 debug_color = Color(0.89301777, 0.18350151, 0.6577111, 0.41960785)

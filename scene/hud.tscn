@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://b7lcsy7bo602y"]
 
-[ext_resource type="Script" uid="uid://b8ajq341thbhj" path="res://scene/hud.gd" id="1_s3k51"]
+[ext_resource type="Script" uid="uid://b8ajq341thbhj" path="res://script/hud.gd" id="1_s3k51"]
 
 [node name="HUD" type="Control" unique_id=1722907877]
 layout_mode = 3
@@ -37,3 +37,31 @@ offset_top = -23.0
 grow_horizontal = 0
 grow_vertical = 0
 text = "12 / 20"
+
+[node name="CurrencyContainer" type="HBoxContainer" parent="." unique_id=1448863180]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -40.0
+offset_bottom = 40.0
+grow_horizontal = 0
+
+[node name="SilverLabel" type="Label" parent="CurrencyContainer" unique_id=1609990849]
+layout_mode = 2
+text = "SILVER: 0"
+
+[node name="DiamondLabel" type="Label" parent="CurrencyContainer" unique_id=1794349914]
+layout_mode = 2
+text = "DIAMOND: 0"
+
+[node name="TimerLabel" type="Label" parent="." unique_id=577884824]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -21.0
+offset_right = 24.130005
+offset_bottom = 26.49
+grow_horizontal = 2
+text = "03:00"

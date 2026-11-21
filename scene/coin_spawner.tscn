@@ -1,0 +1,45 @@
+[gd_scene format=3 uid="uid://dtrk625ug3p6y"]
+
+[ext_resource type="Script" uid="uid://ubvtyarmchop" path="res://script/coin_spawner.gd" id="1_ufabu"]
+[ext_resource type="PackedScene" uid="uid://dqx34rnqvegc8" path="res://scene/coin.tscn" id="2_qwrgm"]
+[ext_resource type="Texture2D" uid="uid://d24xxjl7k76vu" path="res://assets/silverSpawn.png" id="3_bg4ga"]
+[ext_resource type="Texture2D" uid="uid://b7dwd82upatvy" path="res://assets/DiamondSpawner.png" id="4_fdd5k"]
+
+[node name="CoinSpawner" type="Node2D" unique_id=2139815044]
+script = ExtResource("1_ufabu")
+coin_scene = ExtResource("2_qwrgm")
+silver_spawner_texture = ExtResource("3_bg4ga")
+diamond_spawner_texture = ExtResource("4_fdd5k")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=981947379]
+
+[node name="SpawnPoints" type="Node2D" parent="." unique_id=5880730]
+
+[node name="SpawnPoint" type="Marker2D" parent="SpawnPoints" unique_id=1858864505]
+position = Vector2(0, -19)
+
+[node name="SpawnPoint2" type="Marker2D" parent="SpawnPoints" unique_id=1121071818]
+position = Vector2(-27, -10)
+
+[node name="SpawnPoint3" type="Marker2D" parent="SpawnPoints" unique_id=1451731936]
+position = Vector2(24, -10)
+
+[node name="SpawnPoint4" type="Marker2D" parent="SpawnPoints" unique_id=1999574909]
+position = Vector2(-27, 17)
+
+[node name="SpawnPoint5" type="Marker2D" parent="SpawnPoints" unique_id=1141090952]
+position = Vector2(0, 21)
+
+[node name="SpawnPoint6" type="Marker2D" parent="SpawnPoints" unique_id=536405773]
+position = Vector2(26, 16)
+
+[node name="SpawnPoint7" type="Marker2D" parent="SpawnPoints" unique_id=126415469]
+position = Vector2(-28, 0)
+
+[node name="SpawnPoint8" type="Marker2D" parent="SpawnPoints" unique_id=528940656]
+position = Vector2(17, 10)
+
+[node name="SpawnPoint9" type="Marker2D" parent="SpawnPoints" unique_id=1142669064]
+
+[node name="SpawnPoint10" type="Marker2D" parent="SpawnPoints" unique_id=1875150331]
+position = Vector2(-1, -9)

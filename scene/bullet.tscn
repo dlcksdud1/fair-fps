@@ -1,7 +1,7 @@
 [gd_scene format=3 uid="uid://cc1ine35ngjl7"]
 
 [ext_resource type="Texture2D" uid="uid://c63jr0wau6i5b" path="res://assets/bullet-removebg-preview.png" id="1_qwydi"]
-[ext_resource type="Script" uid="uid://cgjwn1g0vnfgv" path="res://scene/bullet.gd" id="1_xw300"]
+[ext_resource type="Script" uid="uid://cgjwn1g0vnfgv" path="res://script/bullet.gd" id="1_xw300"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_fane6"]
 radius = 76.1643
