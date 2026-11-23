@@ -14,6 +14,8 @@ BULLET_RANGE = 1050.0
 PLAYER_HIT_RADIUS = 24.0
 MOVE_SPEED = 250.0
 MOVE_TOLERANCE = 25.0
+# Godot's pickup overlap is about 72 px; this leaves room for position-update delay.
+COIN_PICKUP_DISTANCE = 100.0
 FIRE_COOLDOWN = 0.2
 RELOAD_SECONDS = 1.5
 RESPAWN_SECONDS = 3.0
@@ -308,9 +310,9 @@ class GameCore:
                     await self._send(player_id, {"type": "coin_rejected", "coin_id": coin_id, "reason": "unknown coin"})
                 return
             distance = math.hypot(player["x"] - coin["x"], player["y"] - coin["y"])
-            if self.validate and distance > 50.0:
+            if self.validate and distance > COIN_PICKUP_DISTANCE:
                 if self.secure:
-                    await self._flag(player_id, kind, f"distance={distance:.1f}px", "coin out of reach")
+                    print(f"[PICKUP REJECTED] mode=secure player={player_id} reason=out of reach distance={distance:.1f}px", flush=True)
                 await self._send(player_id, {"type": "coin_rejected", "coin_id": coin_id, "reason": "out of reach"})
                 return
             kind_value = coin["coin_type"]
