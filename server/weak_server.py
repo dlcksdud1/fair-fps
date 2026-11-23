@@ -8,7 +8,8 @@ from game_core import GameCore
 from websockets.asyncio.server import ServerConnection, serve
 from websockets.exceptions import ConnectionClosed
 
-HOST = os.getenv("FAIR_FPS_HOST", "127.0.0.1")
+# Bind all interfaces so localhost and other PCs on the LAN can connect.
+HOST = os.getenv("FAIR_FPS_HOST", "0.0.0.0")
 PORT = int(os.getenv("FAIR_FPS_WEAK_WS_PORT", "7779"))
 MAX_MESSAGE = 8192
 game = GameCore("weak")

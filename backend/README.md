@@ -29,7 +29,7 @@ Connect two clients to `/ws`. The server sends `welcome`, then `state` snapshots
 - Reload: `{"type":"reload","request_id":"r-1"}`. Secure mode restores ammo to 24 subject to its reload interval.
 - State tampering scenario: `{"type":"state","x":900,"y":900,"hp":9999,"ammo":9999}`. Vulnerable mode accepts it; secure mode rejects it.
 
-The current Godot `network_manager.gd` still speaks the older TCP protocol and does not yet connect to this WebSocket backend. The backend is ready for the proposal's Python WebSocket attack simulator; adapting the game client is a separate integration step. Player IDs are session-only, so permanent account bans require authentication and persistent account records.
+The Godot game client uses the Python WebSocket game servers documented in `../server/README.md`. This Spring Boot backend is a separate service for persistence and security-event demonstrations. Player IDs are session-only, so permanent account bans require authentication and persistent account records.
 
 
 
@@ -41,4 +41,4 @@ From PowerShell, start PostgreSQL once with `docker compose up -d`, set `FAIRFPS
 .\run-vulnerable.ps1
 ```
 
-This launches the WebSocket vulnerable profile on `127.0.0.1:7777`. It is separate from the legacy TCP relay in `../server/server.py`.
+This launches the WebSocket vulnerable profile on `127.0.0.1:7777`. It is separate from the Python WebSocket game servers in `../server/`.

@@ -1,11 +1,10 @@
 extends Node
 
 @export var coin_scene: PackedScene
-@export_enum("server TCP", "weak_server WebSocket", "secure_server WebSocket")
-var server_mode: int = 2
+@export_enum("weak_server WebSocket", "secure_server WebSocket")
+var server_mode: int = 1
 
 const HOST := "127.0.0.1"
-const TCP_PORT := 7777
 const WEAK_WS_PORT := 7779
 const SECURE_WS_PORT := 7778
 const SEND_INTERVAL := 0.05
@@ -13,9 +12,7 @@ const SEND_INTERVAL := 0.05
 @onready var player1 = $"../Player"
 @onready var player2 = $"../Player2"
 
-var tcp := StreamPeerTCP.new()
 var websocket := WebSocketPeer.new()
-var receive_buffer: String = ""
 var my_id: int = 0
 var send_timer: float = 0.0
 var network_coins: Dictionary = {}
@@ -26,38 +23,25 @@ func _ready() -> void:
 	player1.is_local_player = false
 	player2.is_local_player = false
 
-	var error: int
-	if server_mode == 0:
-		error = tcp.connect_to_host(HOST, TCP_PORT)
-		print("TCP 서버 연결 시도 중...")
-	else:
-		var port := WEAK_WS_PORT if server_mode == 1 else SECURE_WS_PORT
-		var path := "/ws" if server_mode == 1 else "/"
-		error = websocket.connect_to_url("ws://%s:%d%s" % [HOST, port, path])
-		print("WebSocket 서버 연결 시도 중...")
+	var host := HOST
+	# For another PC, uncomment this line and set the server PC's LAN IPv4 address.
+	# host = "192.168.0.10"
+	var port := WEAK_WS_PORT if server_mode == 0 else SECURE_WS_PORT
+	var error := websocket.connect_to_url("ws://%s:%d/ws" % [host, port])
+	print("WebSocket 서버 연결 시도 중... port=", port)
 	if error != OK:
 		push_error("서버 연결 시작 실패: " + str(error))
 
 
 func _process(delta: float) -> void:
-	if server_mode == 0:
-		tcp.poll()
-		if tcp.get_status() == StreamPeerTCP.STATUS_ERROR:
-			push_error("TCP 서버 연결 오류")
-			set_process(false)
-			return
-		if tcp.get_status() != StreamPeerTCP.STATUS_CONNECTED:
-			return
-		receive_tcp_messages()
-	else:
-		websocket.poll()
-		if websocket.get_ready_state() == WebSocketPeer.STATE_CLOSED:
-			push_error("WebSocket 서버 연결이 종료되었습니다.")
-			set_process(false)
-			return
-		if websocket.get_ready_state() != WebSocketPeer.STATE_OPEN:
-			return
-		receive_websocket_messages()
+	websocket.poll()
+	if websocket.get_ready_state() == WebSocketPeer.STATE_CLOSED:
+		push_error("WebSocket 서버 연결이 종료되었습니다.")
+		set_process(false)
+		return
+	if websocket.get_ready_state() != WebSocketPeer.STATE_OPEN:
+		return
+	receive_websocket_messages()
 
 	if my_id == 0:
 		return
@@ -65,16 +49,6 @@ func _process(delta: float) -> void:
 	if send_timer >= SEND_INTERVAL:
 		send_timer = 0.0
 		send_my_position()
-
-func receive_tcp_messages() -> void:
-	var available := tcp.get_available_bytes()
-	if available > 0:
-		receive_buffer += tcp.get_utf8_string(available)
-	while receive_buffer.contains("\n"):
-		var newline_index := receive_buffer.find("\n")
-		var line := receive_buffer.substr(0, newline_index).strip_edges()
-		receive_buffer = receive_buffer.substr(newline_index + 1)
-		_handle_message_text(line)
 
 func receive_websocket_messages() -> void:
 	while websocket.get_available_packet_count() > 0:
@@ -86,8 +60,6 @@ func _handle_message_text(text: String) -> void:
 		handle_message(message)
 
 func is_connected_to_server() -> bool:
-	if server_mode == 0:
-		return tcp.get_status() == StreamPeerTCP.STATUS_CONNECTED
 	return websocket.get_ready_state() == WebSocketPeer.STATE_OPEN
 
 func handle_message(message: Dictionary) -> void:
@@ -222,10 +194,6 @@ func handle_message(message: Dictionary) -> void:
 			if hud != null:
 				hud.update_timer(0)
 func send_message(message: Dictionary) -> Error:
-	if server_mode == 0:
-		if tcp.get_status() != StreamPeerTCP.STATUS_CONNECTED:
-			return ERR_UNAVAILABLE
-		return tcp.put_data((JSON.stringify(message) + "\n").to_utf8_buffer())
 	if websocket.get_ready_state() != WebSocketPeer.STATE_OPEN:
 		return ERR_UNAVAILABLE
 	return websocket.send_text(JSON.stringify(message))

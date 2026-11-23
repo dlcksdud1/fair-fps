@@ -15,6 +15,10 @@ game = GameCore("secure")
 
 
 async def handle(ws: ServerConnection) -> None:
+    if ws.request.path != "/ws":
+        await ws.close(code=1008, reason="use /ws")
+        return
+
     async def send(message: dict) -> None:
         await ws.send(json.dumps(message, separators=(",", ":")))
 
@@ -46,7 +50,7 @@ async def handle(ws: ServerConnection) -> None:
 
 async def main() -> None:
     async with serve(handle, HOST, PORT, max_size=MAX_MESSAGE):
-        print(f"FairFPS secure WebSocket server listening on ws://{HOST}:{PORT}", flush=True)
+        print(f"FairFPS secure WebSocket server listening on ws://{HOST}:{PORT}/ws", flush=True)
         await asyncio.Future()
 
 
