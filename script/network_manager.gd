@@ -1,77 +1,95 @@
 extends Node
 
 @export var coin_scene: PackedScene
+@export_enum("server TCP", "weak_server WebSocket", "secure_server WebSocket")
+var server_mode: int = 2
 
 const HOST := "127.0.0.1"
-const PORT := 7777
+const TCP_PORT := 7777
+const WEAK_WS_PORT := 7779
+const SECURE_WS_PORT := 7778
 const SEND_INTERVAL := 0.05
 
 @onready var player1 = $"../Player"
 @onready var player2 = $"../Player2"
 
 var tcp := StreamPeerTCP.new()
-var my_id: int = 0
+var websocket := WebSocketPeer.new()
 var receive_buffer: String = ""
+var my_id: int = 0
 var send_timer: float = 0.0
 var network_coins: Dictionary = {}
 var pending_coins: Dictionary = {}
 var match_ended: bool = false
 
 func _ready() -> void:
-	#서버가 플레이어 번호를 배정할 때까지 입력 차단
 	player1.is_local_player = false
 	player2.is_local_player = false
-	
-	var error := tcp.connect_to_host(HOST, PORT)
-	
-	if error != OK:
-		push_error("서버 연결 시작실패: " + str(error))
+
+	var error: int
+	if server_mode == 0:
+		error = tcp.connect_to_host(HOST, TCP_PORT)
+		print("TCP 서버 연결 시도 중...")
 	else:
-		print("서버 연결 시도 중...")
-	
-	call_deferred("export_spawn_config")
-	
+		var port := WEAK_WS_PORT if server_mode == 1 else SECURE_WS_PORT
+		var path := "/ws" if server_mode == 1 else "/"
+		error = websocket.connect_to_url("ws://%s:%d%s" % [HOST, port, path])
+		print("WebSocket 서버 연결 시도 중...")
+	if error != OK:
+		push_error("서버 연결 시작 실패: " + str(error))
+
+
 func _process(delta: float) -> void:
-	tcp.poll()
-	
-	var status := tcp.get_status()
-	
-	if status == StreamPeerTCP.STATUS_ERROR:
-		push_error("서버 연결 오류")
-		set_process(false)
-		return
-		
-	if status != StreamPeerTCP.STATUS_CONNECTED:
-		return
-		
-	receive_messages()
-	
+	if server_mode == 0:
+		tcp.poll()
+		if tcp.get_status() == StreamPeerTCP.STATUS_ERROR:
+			push_error("TCP 서버 연결 오류")
+			set_process(false)
+			return
+		if tcp.get_status() != StreamPeerTCP.STATUS_CONNECTED:
+			return
+		receive_tcp_messages()
+	else:
+		websocket.poll()
+		if websocket.get_ready_state() == WebSocketPeer.STATE_CLOSED:
+			push_error("WebSocket 서버 연결이 종료되었습니다.")
+			set_process(false)
+			return
+		if websocket.get_ready_state() != WebSocketPeer.STATE_OPEN:
+			return
+		receive_websocket_messages()
+
 	if my_id == 0:
 		return
-		
 	send_timer += delta
-	
 	if send_timer >= SEND_INTERVAL:
 		send_timer = 0.0
 		send_my_position()
-		
-func receive_messages() -> void:
+
+func receive_tcp_messages() -> void:
 	var available := tcp.get_available_bytes()
-	
 	if available > 0:
 		receive_buffer += tcp.get_utf8_string(available)
-		
 	while receive_buffer.contains("\n"):
 		var newline_index := receive_buffer.find("\n")
 		var line := receive_buffer.substr(0, newline_index).strip_edges()
-		
 		receive_buffer = receive_buffer.substr(newline_index + 1)
-		
-		var message = JSON.parse_string(line)
-		
-		if typeof(message) == TYPE_DICTIONARY:
-			handle_message(message)
-			
+		_handle_message_text(line)
+
+func receive_websocket_messages() -> void:
+	while websocket.get_available_packet_count() > 0:
+		_handle_message_text(websocket.get_packet().get_string_from_utf8())
+
+func _handle_message_text(text: String) -> void:
+	var message = JSON.parse_string(text)
+	if typeof(message) == TYPE_DICTIONARY:
+		handle_message(message)
+
+func is_connected_to_server() -> bool:
+	if server_mode == 0:
+		return tcp.get_status() == StreamPeerTCP.STATUS_CONNECTED
+	return websocket.get_ready_state() == WebSocketPeer.STATE_OPEN
+
 func handle_message(message: Dictionary) -> void:
 	match message.get("type", ""):
 		"welcome":
@@ -87,6 +105,25 @@ func handle_message(message: Dictionary) -> void:
 			
 			get_local_player().update_hud()
 			
+		"snapshot":
+			var players: Dictionary = message.get("players", {})
+			for key in players:
+				var player_id := int(key)
+				var target = get_player(player_id)
+				if target != null:
+					var state: Dictionary = players[key]
+					target.global_position = Vector2(float(state.get("x", 0)), float(state.get("y", 0)))
+					target.global_rotation = float(state.get("rotation", 0))
+					target.hp = int(state.get("hp", target.hp))
+					target.ammo = int(state.get("ammo", target.ammo))
+					target.silver = int(state.get("silver", target.silver))
+					target.diamond = int(state.get("diamond", target.diamond))
+					target.update_hud()
+		"position_rejected":
+			var player = get_local_player()
+			if player != null:
+				player.global_position = Vector2(float(message.get("x", 0)), float(message.get("y", 0)))
+				player.global_rotation = float(message.get("rotation", 0))
 		"position":
 			var other_id := int(message.get("id", 0))
 			var target = get_player(other_id)
@@ -154,13 +191,25 @@ func handle_message(message: Dictionary) -> void:
 				player.is_reloading = bool(message.get("reloading", false))
 				player.update_hud()
 				
-			print(
-			"[AMMO UPDATE] ammo=", player.ammo,
-			" reloading=", player.is_reloading
-			)
+			if player != null:
+				print("[AMMO UPDATE] ammo=", player.ammo, " reloading=", player.is_reloading)
 				
+		"hp_update":
+			var target = get_player(int(message.get("id", 0)))
+			if target != null:
+				target.hp = int(message.get("hp", target.hp))
+				target.update_hud()
+				if target.hp <= 0:
+					target.die()
+		"player_respawn":
+			var target = get_player(int(message.get("id", 0)))
+			if target != null:
+				target.global_position = Vector2(float(message.get("x", 0)), float(message.get("y", 0)))
+				target.respawn()
 		"shoot_rejected":
 			print("서버에서 발사 거절")
+		"request_rejected":
+			print("서버 검증에서 요청 거절: ", message.get("reason", "unknown"))
 				
 		"match_end":
 			match_ended = true
@@ -172,21 +221,26 @@ func handle_message(message: Dictionary) -> void:
 			
 			if hud != null:
 				hud.update_timer(0)
+func send_message(message: Dictionary) -> Error:
+	if server_mode == 0:
+		if tcp.get_status() != StreamPeerTCP.STATUS_CONNECTED:
+			return ERR_UNAVAILABLE
+		return tcp.put_data((JSON.stringify(message) + "\n").to_utf8_buffer())
+	if websocket.get_ready_state() != WebSocketPeer.STATE_OPEN:
+		return ERR_UNAVAILABLE
+	return websocket.send_text(JSON.stringify(message))
+
 func send_my_position() -> void:
 	var player = get_local_player()
-	
 	if player == null:
 		return
-		
-	var message := JSON.stringify({
+	send_message({
 		"type": "position",
 		"x": player.global_position.x,
 		"y": player.global_position.y,
 		"rotation": player.global_rotation
-	}) + "\n"
-	
-	tcp.put_data(message.to_utf8_buffer())
-	
+	})
+
 func spawn_network_coin(message: Dictionary) -> void:
 	var coin_id := int(message.get("coin_id", -1))
 	if coin_id < 0:
@@ -230,7 +284,7 @@ func get_local_player():
 	return get_player(my_id)
 	
 func request_collect_coin(coin_id: int) -> void:
-	if tcp.get_status() != StreamPeerTCP.STATUS_CONNECTED:
+	if not is_connected_to_server():
 		return
 	if my_id == 0:
 		return
@@ -240,42 +294,34 @@ func request_collect_coin(coin_id: int) -> void:
 	pending_coins[coin_id] = true
 	send_my_position()
 	
-	var message := JSON.stringify({
+	var error := send_message({
 		"type": "collect_coin",
 		"coin_id": coin_id
-	}) + "\n"
-	
-	var error := tcp.put_data(message.to_utf8_buffer())
+	})
 	
 	if error != OK:
 		pending_coins.erase(coin_id)
 		
 func request_shoot(rotation_value: float) -> void:
-	if tcp.get_status() != StreamPeerTCP.STATUS_CONNECTED:
+	if not is_connected_to_server():
 		return
 	
 	if my_id == 0 or match_ended:
 		return
 	
-	var message := JSON.stringify({
+	send_message({
 		"type": "shoot_request",
 		"rotation": rotation_value
-	}) + "\n"
-	
-	tcp.put_data(message.to_utf8_buffer())
+	})
 
 func request_reload() -> void:
-	if tcp.get_status() != StreamPeerTCP.STATUS_CONNECTED:
+	if not is_connected_to_server():
 		return
 		
 	if my_id == 0 or match_ended:
 		return
 		
-	var message := JSON.stringify({
-		"type": "reload_request"
-	}) + "\n"
-	
-	tcp.put_data(message.to_utf8_buffer())
+	send_message({"type": "reload_request"})
 	
 func spawn_server_bullet(message: Dictionary) -> void:
 	var shooter_id := int(message.get("shooter_id", 0))
@@ -299,29 +345,4 @@ func spawn_server_bullet(message: Dictionary) -> void:
 	
 	bullet.direction = Vector2.RIGHT.rotated(rotation_value)
 	bullet.global_rotation = rotation_value
-	
-func export_spawn_config() -> void:
-	var configs: Array = []
-	
-	for node in get_tree().get_nodes_in_group("coin_spawners"):
-		configs.append(node.get_spawn_config())
-		
-	var file = FileAccess.open(
-		"user://spawn_points.json",
-		FileAccess.WRITE
-	)
-	
-	if file == null:
-		push_error("생성 지점 파일 생성 실패")
-		return
-	
-	file.store_string(JSON.stringify(configs, "\t"))
-	file.close()
-	
-	print(
-		"생성 지점 설정 저장 완료: ",
-		ProjectSettings.globalize_path(
-			"user://spawn_points.json"
-		)
-	)
 	

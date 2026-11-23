@@ -1,123 +1,57 @@
 from __future__ import annotations
 
+import asyncio
 import json
-import math
 import os
-import socketserver
-import threading
-import time
+
+from game_core import GameCore
+from websockets.asyncio.server import ServerConnection, serve
+from websockets.exceptions import ConnectionClosed
 
 HOST = os.getenv("FAIR_FPS_HOST", "0.0.0.0")
-PORT = int(os.getenv("FAIR_FPS_PORT", "7777"))
-MAX_LINE = 8192
-MAX_SPEED = 250.0
-MOVEMENT_TOLERANCE = 25.0
-MAX_VIOLATIONS = 3
-SPAWNS = {1: (116.0, 122.0), 2: (350.0, 141.0)}
+PORT = int(os.getenv("FAIR_FPS_SECURE_WS_PORT", "7778"))
+MAX_MESSAGE = 8192
+game = GameCore("secure")
 
 
-class SecureGameServer(socketserver.ThreadingTCPServer):
-    allow_reuse_address = True
-    daemon_threads = True
+async def handle(ws: ServerConnection) -> None:
+    async def send(message: dict) -> None:
+        await ws.send(json.dumps(message, separators=(",", ":")))
 
-    def __init__(self, address):
-        super().__init__(address, Client)
-        self.lock = threading.Lock()
-        self.clients: dict[int, object] = {}
-        self.positions = {player_id: spawn for player_id, spawn in SPAWNS.items()}
-        self.updated_at = {player_id: time.monotonic() for player_id in SPAWNS}
-        self.violations = {player_id: 0 for player_id in SPAWNS}
+    async def close() -> None:
+        await ws.close(code=1008, reason="too many invalid requests")
 
-    def send(self, client, message: dict) -> None:
-        client.sendall((json.dumps(message, separators=(",", ":")) + "\n").encode())
-
-    def broadcast(self, message: dict, exclude=None) -> None:
-        payload = (json.dumps(message, separators=(",", ":")) + "\n").encode()
-        with self.lock:
-            for peer in list(self.clients.values()):
-                if peer is exclude:
-                    continue
-                try:
-                    peer.sendall(payload)
-                except OSError:
-                    pass
-
-    def accept_position(self, player_id: int, x: float, y: float) -> bool:
-        with self.lock:
-            now = time.monotonic()
-            previous = self.positions[player_id]
-            elapsed = now - self.updated_at[player_id]
-            allowed_distance = MAX_SPEED * elapsed + MOVEMENT_TOLERANCE
-            distance = math.hypot(x - previous[0], y - previous[1])
-
-            if distance > allowed_distance:
-                self.violations[player_id] += 1
-                print(f"[DETECTED] player={player_id} invalid movement "
-                      f"({distance:.1f}px > {allowed_distance:.1f}px), "
-                      f"count={self.violations[player_id]}")
-                return self.violations[player_id] < MAX_VIOLATIONS
-
-            self.positions[player_id] = (x, y)
-            self.updated_at[player_id] = now
-            return True
+    player_id = await game.connect(send, close)
+    if player_id is None:
+        return
+    try:
+        async for raw in ws:
+            if not isinstance(raw, str) or len(raw.encode("utf-8")) > MAX_MESSAGE:
+                await game._flag(player_id, "message", "invalid or oversized payload", "invalid message")
+                continue
+            try:
+                message = json.loads(raw)
+            except json.JSONDecodeError:
+                await game._flag(player_id, "message", "malformed JSON", "invalid JSON")
+                continue
+            if isinstance(message, dict):
+                await game.process(player_id, message)
+            else:
+                await game._flag(player_id, "message", "expected JSON object", "invalid message")
+    except ConnectionClosed:
+        pass
+    finally:
+        await game.disconnect(player_id)
 
 
-class Client(socketserver.StreamRequestHandler):
-    def handle(self) -> None:
-        server: SecureGameServer = self.server
-        self.request.settimeout(60)
-
-        with server.lock:
-            player_id = next((i for i in (1, 2) if i not in server.clients), None)
-            if player_id is None:
-                server.send(self.request, {"type": "full"})
-                return
-            server.clients[player_id] = self.request
-
-        try:
-            server.send(self.request, {"type": "welcome", "id": player_id})
-            while True:
-                line = self.rfile.readline(MAX_LINE + 1)
-                if not line:
-                    break
-                if len(line) > MAX_LINE or not line.endswith(b"\n"):
-                    break
-                try:
-                    message = json.loads(line)
-                except (json.JSONDecodeError, UnicodeDecodeError):
-                    continue
-                if not isinstance(message, dict) or message.get("type") != "position":
-                    continue
-
-                values = (message.get(key) for key in ("x", "y", "rotation"))
-                try:
-                    if any(type(value) not in (int, float) for value in values):
-                        continue
-                    x, y, rotation = (float(message[key]) for key in ("x", "y", "rotation"))
-                except (OverflowError, TypeError, ValueError):
-                    continue
-                if not all(math.isfinite(value) for value in (x, y, rotation)):
-                    continue
-                if not server.accept_position(player_id, x, y):
-                    break
-                server.broadcast({
-                    "type": "position", "id": player_id,
-                    "x": x, "y": y, "rotation": rotation,
-                }, exclude=self.request)
-        except (OSError, TimeoutError):
-            pass
-        finally:
-            with server.lock:
-                if server.clients.get(player_id) is self.request:
-                    del server.clients[player_id]
-            server.broadcast({"type": "leave", "id": player_id}, exclude=self.request)
+async def main() -> None:
+    async with serve(handle, HOST, PORT, max_size=MAX_MESSAGE):
+        print(f"FairFPS secure WebSocket server listening on ws://{HOST}:{PORT}", flush=True)
+        await asyncio.Future()
 
 
 if __name__ == "__main__":
-    with SecureGameServer((HOST, PORT)) as game_server:
-        print(f"FairFPS secure server listening on {HOST}:{PORT}")
-        try:
-            game_server.serve_forever()
-        except KeyboardInterrupt:
-            print("\nServer stopped")
-
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print("Server stopped")
