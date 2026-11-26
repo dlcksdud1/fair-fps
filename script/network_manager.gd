@@ -172,12 +172,14 @@ func handle_message(message: Dictionary) -> void:
 				target.hp = int(message.get("hp", target.hp))
 				target.update_hud()
 				if target.hp <= 0:
-					target.die()
+					target.server_die()
 		"player_respawn":
 			var target = get_player(int(message.get("id", 0)))
 			if target != null:
-				target.global_position = Vector2(float(message.get("x", 0)), float(message.get("y", 0)))
-				target.respawn()
+				target.server_respawn(
+					Vector2(float(message.get("x", 0)), float(message.get("y", 0))),
+					int(message.get("hp", target.max_hp))
+				)
 		"shoot_rejected":
 			print("서버에서 발사 거절")
 		"request_rejected":
@@ -193,6 +195,9 @@ func handle_message(message: Dictionary) -> void:
 			
 			if hud != null:
 				hud.update_timer(0)
+				var game_over = hud.get_node_or_null("GameOver")
+				if game_over != null:
+					game_over.show()
 func send_message(message: Dictionary) -> Error:
 	if websocket.get_ready_state() != WebSocketPeer.STATE_OPEN:
 		return ERR_UNAVAILABLE

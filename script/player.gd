@@ -7,6 +7,7 @@ extends CharacterBody2D
 @export var reload_time: float = 1.5
 @export var is_local_player: bool = true
 @export var respawn_time: float = 3.0
+@export var team_color: Color = Color.WHITE
 
 
 @onready var muzzle: Marker2D = $Muzzle
@@ -28,6 +29,7 @@ func _ready() -> void:
 	original_collision_mask = collision_mask
 	spawn_position = global_position
 	hp = max_hp
+	$Sprite2D.self_modulate = team_color
 	call_deferred("update_hud")
 	$PickupArea.area_entered.connect(_on_pickup_area_entered)
 	
@@ -146,6 +148,29 @@ func respawn() -> void:
 	is_dead = false
 	
 	print(name, "부활 완료 HP: ", hp)
+
+func server_die() -> void:
+	if is_dead:
+		return
+	is_dead = true
+	hp = 0
+	velocity = Vector2.ZERO
+	collision_layer = 0
+	collision_mask = 0
+	visible = false
+	update_hud()
+
+func server_respawn(new_position: Vector2, new_hp: int) -> void:
+	global_position = new_position
+	hp = new_hp
+	is_dead = false
+	velocity = Vector2.ZERO
+	collision_layer = original_collision_layer
+	collision_mask = original_collision_mask
+	visible = true
+	fire_timer = 0.0
+	is_reloading = false
+	update_hud()
 	
 func update_hud() -> void:
 	if not is_local_player:

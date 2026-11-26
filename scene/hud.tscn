@@ -65,3 +65,33 @@ offset_right = 24.130005
 offset_bottom = 26.49
 grow_horizontal = 2
 text = "03:00"
+
+[node name="GameOver" type="Control" parent="." unique_id=1805169400]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Background" type="ColorRect" parent="GameOver" unique_id=1252189393]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.701961)
+
+[node name="GameOverLabel" type="Label" parent="GameOver" unique_id=1059704556]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_font_sizes/font_size = 64
+text = "GAME OVER!"
+horizontal_alignment = 1
+vertical_alignment = 1
