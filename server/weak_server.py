@@ -46,7 +46,7 @@ async def handle(ws: ServerConnection) -> None:
                            "rotation": game.players[player_id]["rotation"]}
             elif kind == "shoot":
                 message = {"type": "shoot_request", "rotation": message.get("rotation", 0),
-                           "damage": message.get("damage", 25), "target_id": message.get("target_id")}
+                           "damage": message.get("damage", 25)}
             elif kind == "reload":
                 message = {"type": "reload_request", "reload_time": message.get("reload_time", 0)}
             await game.process(player_id, message)
