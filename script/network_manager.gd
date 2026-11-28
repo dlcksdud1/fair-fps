@@ -188,15 +188,38 @@ func handle_message(message: Dictionary) -> void:
 		"match_end":
 			match_ended = true
 			print("경기 종료!")
-			
-			var hud = get_tree().current_scene.get_node_or_null(
-				"CanvasLayer/HUD"
-			)
-			
+			var winner := int(message.get("winner", 0))
+			var p1_diamond := int(message.get("p1_diamond", 0))
+			var p1_silver := int(message.get("p1_silver", 0))
+			var p2_diamond := int(message.get("p2_diamond", 0))
+			var p2_silver := int(message.get("p2_silver", 0))
+			var result_text := "DRAW!"
+			var result_color := Color.YELLOW
+			if winner == my_id:
+				result_text = "VICTORY!"
+				result_color = Color.LIME_GREEN
+			elif winner != 0:
+				result_text = "DEFEAT!"
+				result_color = Color.TOMATO
+
+			var hud = get_tree().current_scene.get_node_or_null("CanvasLayer/HUD")
 			if hud != null:
 				hud.update_timer(0)
 				var game_over = hud.get_node_or_null("GameOver")
 				if game_over != null:
+					var result_label = game_over.get_node_or_null("GameOverLabel")
+					if result_label != null:
+						result_label.add_theme_font_size_override("font_size", 32)
+						result_label.modulate = result_color
+						result_label.text = "\n".join([
+							result_text,
+							"",
+							"PLAYER 1",
+							"Diamond: %d | Silver: %d" % [p1_diamond, p1_silver],
+							"",
+							"PLAYER 2",
+							"Diamond: %d | Silver: %d" % [p2_diamond, p2_silver]
+						])
 					game_over.show()
 func send_message(message: Dictionary) -> Error:
 	if websocket.get_ready_state() != WebSocketPeer.STATE_OPEN:

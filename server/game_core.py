@@ -221,7 +221,23 @@ class GameCore:
                 last_remaining = remaining
             if remaining == 0:
                 self.match_ended = True
-                await self.broadcast({"type": "match_end"})
+                self.projectiles.clear()
+                p1 = self.players.get(1) or self._new_player(1)
+                p2 = self.players.get(2) or self._new_player(2)
+                if p1["diamond"] != p2["diamond"]:
+                    winner = 1 if p1["diamond"] > p2["diamond"] else 2
+                elif p1["silver"] != p2["silver"]:
+                    winner = 1 if p1["silver"] > p2["silver"] else 2
+                else:
+                    winner = 0
+                await self.broadcast({
+                    "type": "match_end",
+                    "winner": winner,
+                    "p1_diamond": p1["diamond"],
+                    "p1_silver": p1["silver"],
+                    "p2_diamond": p2["diamond"],
+                    "p2_silver": p2["silver"],
+                })
                 break
             if self.projectiles:
                 await self._advance_projectiles(now)
