@@ -404,7 +404,6 @@ texture = ExtResource("2_0ha60")
 
 [node name="Player" parent="." unique_id=988214187 instance=ExtResource("1_itxqv")]
 position = Vector2(116, 122)
-move_speed = 800.0
 
 [node name="Player2" parent="." unique_id=1932716136 instance=ExtResource("1_itxqv")]
 position = Vector2(350, 141)

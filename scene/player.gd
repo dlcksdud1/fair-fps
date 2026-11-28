@@ -1,12 +1,12 @@
 extends CharacterBody2D
 
-@export var move_speed : float = 250.0
+@export var move_speed : float = 800.0
 @export var bullet_scene: PackedScene
-@export var max_hp: int = 100
+@export var max_hp: int = 300
 @export var magazine_size: int = 12
 @export var reload_time: float = 1.5
 @export var is_local_player: bool = true
-@export var respawn_time: float = 3.0
+@export var respawn_time: float = 0.5
 
 
 @onready var muzzle: Marker2D = $Muzzle
@@ -14,7 +14,7 @@ extends CharacterBody2D
 var fire_cooldown: float = 0.2
 var fire_timer: float = 0.0
 var hp: int
-var ammo: int = 12
+var ammo: int = 20
 var is_reloading: bool = false
 var spawn_position: Vector2
 var is_dead: bool = false
@@ -28,6 +28,7 @@ func _ready() -> void:
 	original_collision_mask = collision_mask
 	spawn_position = global_position
 	hp = max_hp
+	ammo = magazine_size
 	call_deferred("update_hud")
 	$PickupArea.area_entered.connect(_on_pickup_area_entered)
 	
